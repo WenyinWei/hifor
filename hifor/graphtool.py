@@ -22,6 +22,12 @@ def is_single_source_DAG(graph):
         return True
     else:
         return False
+def source_set_of_DAG(graph):
+    sources = set()
+    for n in graph.nodes:
+        if graph.in_degree(n) == 0:
+            sources.add(n)
+    return sources
 
 def is_single_sink_DAG(graph):
     if not is_directed_acyclic_graph(graph):
@@ -36,3 +42,15 @@ def is_single_sink_DAG(graph):
         return True
     else:
         return False
+def sink_set_of_DAG(graph):
+    sinks = set()
+    for n in graph.nodes:
+        if graph.out_degree(n) == 0:
+            sinks.add(n)
+    return sinks
+
+def lambdify_graph(graph):
+    if not is_single_source_DAG(graph):
+        raise ValueError("The graph to be lambdified must be a single source directed acyclic graph.")
+    
+    return 

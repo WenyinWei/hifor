@@ -69,10 +69,17 @@ def condensate_hifor_to_root_and_its_expr(graph):
 
 def embed_subgraph_into_graph(subgraph, graph, created_var_in_graph, expr_arg_subs_dict):
     subgraph_root, subgraph_expr = condensate_hifor_to_root_and_its_expr(subgraph)
-    if subgraph_expr.free_symbols!=expr_arg_subs_dict.keys():
-        raise ValueError("The elements of `eqarg_subs_dict` shall has a 1-to-1 correspondence with the sinks of the specified subgraph.")
+    _parameter_set = subgraph_expr.free_symbols - expr_arg_subs_dict.keys()
+    for n in _parameter_set:
+        if not "val" in subgraph.nodes[n]:    
+            raise ValueError(f"The {n} free symbol of subgraph cannot find the correspondence in the specified `eqarg_subs_dict`.")
     # module_node = (subgraph_root, subgraph_expr, expr_arg_subs_dict) # The subgraph is now regarded as a module embedded in the graph.
     graph.add_node(created_var_in_graph, expr=subgraph_expr.subs(expr_arg_subs_dict) )
+    for param_sym in _parameter_set:
+        graph.add_node(param_sym, **subgraph.nodes[param_sym] )
     for free_sym in subgraph_expr.free_symbols:
-        graph.add_edge(created_var_in_graph, expr_arg_subs_dict[free_sym])
+        if free_sym in _parameter_set:
+            graph.add_edge(created_var_in_graph, free_sym)
+        else:
+            graph.add_edge(created_var_in_graph, expr_arg_subs_dict[free_sym])
     

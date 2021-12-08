@@ -1,8 +1,11 @@
+from hifor.height import write_heights_of_all_nodes
 from networkx import is_directed_acyclic_graph
+from sympy import Eq
+
 
 def add_nodes_and_edges_from_Eq(graph, eq):
     graph.add_nodes_from([
-        (eq.lhs, {"Eq": eq}),
+        (eq.lhs, {"expr": eq.rhs}),
         *eq.rhs.free_symbols
     ])
     for free_sym in eq.rhs.free_symbols:
@@ -49,11 +52,27 @@ def sink_set_of_DAG(graph):
             _sinks.add(n)
     return _sinks
 
-def lambdify_graph(graph):
+def condensate_hifor_to_root_and_its_expr(graph):
     if not is_single_source_DAG(graph):
         raise ValueError("The graph to be lambdified must be a single source directed acyclic graph.")
     else:
         _source_set = source_set_of_DAG(graph)
-    _source_set = 
+    write_heights_of_all_nodes(graph)
+    for _root in _source_set: # in fact there is only one source
+        _expr = graph.nodes[_root]["expr"]
+        while any(list( map(lambda x: graph.nodes[x]["height"]>0, _expr.free_symbols) )):
+            for free_sym in _expr.free_symbols:
+                if graph.nodes[free_sym]["height"] > 0:
+                    _expr = _expr.subs(free_sym, graph.nodes[free_sym]["expr"])
     
-    return 
+    return _root, _expr
+
+def embed_subgraph_into_graph(subgraph, graph, created_var_in_graph, expr_arg_subs_dict):
+    subgraph_root, subgraph_expr = condensate_hifor_to_root_and_its_expr(subgraph)
+    if subgraph_expr.free_symbols!=expr_arg_subs_dict.keys():
+        raise ValueError("The elements of `eqarg_subs_dict` shall has a 1-to-1 correspondence with the sinks of the specified subgraph.")
+    # module_node = (subgraph_root, subgraph_expr, expr_arg_subs_dict) # The subgraph is now regarded as a module embedded in the graph.
+    graph.add_node(created_var_in_graph, expr=subgraph_expr.subs(expr_arg_subs_dict) )
+    for free_sym in subgraph_expr.free_symbols:
+        graph.add_edge(created_var_in_graph, expr_arg_subs_dict[free_sym])
+    
